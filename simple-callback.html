@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopee Callback</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ee4d2d 0%, #ff6b35 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .status.show {
+            display: block;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+        
+        .status-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .status-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .status-message {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .data-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .data-box.show {
+            display: block;
+        }
+        
+        .data-box h3 {
+            color: #495057;
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .data-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .data-label {
+            color: #6c757d;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .data-value {
+            color: #212529;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        
+        .raw-data {
+            background: #2d2d2d;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ee4d2d;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .copy-btn {
+            background: #ee4d2d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: #d43d1d;
+        }
+        
+        .copy-btn:active {
+            background: #c02d0d;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🛍️</div>
+            <h1>Shopee Callback Handler</h1>
+        </div>
+        
+        <div id="status" class="status"></div>
+        <div id="dataBox" class="data-box"></div>
+    </div>
+
+    <script>
+        // รับ URL parameters ทั้งหมด
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const result = {};
+            for (const [key, value] of params) {
+                result[key] = value;
+            }
+            return result;
+        }
+
+        // แสดงสถานะ
+        function showStatus(type, icon, title, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type} show`;
+            statusDiv.innerHTML = `
+                <div class="status-icon">${icon}</div>
+                <div class="status-title">${title}</div>
+                <div class="status-message">${message}</div>
+            `;
+        }
+
+        // แสดงข้อมูล
+        function showData(params) {
+            const dataBox = document.getElementById('dataBox');
+            let itemsHtml = '';
+            
+            // สร้าง data items
+            for (const [key, value] of Object.entries(params)) {
+                itemsHtml += `
+                    <div class="data-item">
+                        <div class="data-label">${key}</div>
+                        <div class="data-value">${value}</div>
+                    </div>
+                `;
+            }
+            
+            const jsonData = JSON.stringify(params, null, 2);
+            
+            dataBox.className = 'data-box show';
+            dataBox.innerHTML = `
+                <h3>📦 ข้อมูลที่ได้รับ</h3>
+                ${itemsHtml}
+                <div class="raw-data">${jsonData}</div>
+                <button class="copy-btn" onclick="copyToClipboard()">📋 Copy JSON</button>
+            `;
+        }
+
+        // Copy ข้อมูลไปยัง clipboard
+        function copyToClipboard() {
+            const params = getUrlParams();
+            const jsonData = JSON.stringify(params, null, 2);
+            
+            navigator.clipboard.writeText(jsonData).then(() => {
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✓ Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                }, 2000);
+            }).catch(err => {
+                alert('ไม่สามารถ copy ได้: ' + err);
+            });
+        }
+
+        // ส่งข้อมูลไปยัง backend
+        async function sendToBackend(params) {
+            try {
+                // แก้ URL นี้ให้ชี้ไปที่ backend API ของคุณ
+                const response = await fetch('/api/shopee/callback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(params)
+                });
+                
+                if (response.ok) {
+                    console.log('✓ ส่งข้อมูลไป backend สำเร็จ');
+                    return await response.json();
+                } else {
+                    console.error('✗ ส่งข้อมูลไป backend ไม่สำเร็จ');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Backend error:', error);
+                return null;
+            }
+        }
+
+        // จัดการ callback
+        async function handleCallback() {
+            const params = getUrlParams();
+            
+            // ถ้าไม่มี parameters
+            if (Object.keys(params).length === 0) {
+                showStatus('info', '⏳', 'รอข้อมูล', 'กำลังรอรับข้อมูลจาก Shopee...');
+                return;
+            }
+
+            // แสดงข้อมูลที่ได้รับ
+            showData(params);
+
+            // ตรวจสอบประเภทของ callback
+            if (params.error) {
+                // มี error จาก Shopee
+                showStatus(
+                    'error', 
+                    '❌', 
+                    'เกิดข้อผิดพลาด',
+                    `${params.error}: ${params.error_description || 'ไม่มีรายละเอียด'}`
+                );
+            } 
+            else if (params.code && params.shop_id) {
+                // OAuth callback - ได้รับ authorization code
+                showStatus(
+                    'success', 
+                    '✅', 
+                    'รับ Authorization Code สำเร็จ',
+                    `Shop ID: ${params.shop_id}<br>Code: ${params.code.substring(0, 20)}...`
+                );
+                
+                // ส่งข้อมูลไป backend (ถ้าต้องการ)
+                // await sendToBackend(params);
+            }
+            else if (params.order_sn || params.timestamp) {
+                // Webhook callback
+                showStatus(
+                    'success', 
+                    '📬', 
+                    'รับ Webhook สำเร็จ',
+                    'ได้รับข้อมูล webhook จาก Shopee'
+                );
+                
+                // ส่งข้อมูลไป backend
+                // await sendToBackend(params);
+            }
+            else {
+                // ข้อมูลอื่นๆ
+                showStatus(
+                    'info', 
+                    'ℹ️', 
+                    'รับข้อมูลสำเร็จ',
+                    `ได้รับพารามิเตอร์ ${Object.keys(params).length} รายการ`
+                );
+            }
+
+            // Log ข้อมูลใน console
+            console.log('Shopee Callback Data:', params);
+        }
+
+        // เรียกใช้เมื่อโหลดหน้าเว็บ
+        handleCallback();
+    </script>
+</body>
+</html>
